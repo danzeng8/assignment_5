@@ -186,8 +186,6 @@
 
                         var findIndexToSwitch = function(posY) {
                             var index = 0;
-                            console.log(posY);
-                            console.log(continentYs);
                             if(posY < margin.top + height && posY > continentYsNoOffset[0]) {
                                 index = 0;
                             }
@@ -270,7 +268,6 @@
                                 .attr("fill", "red")
                                 .attr("x", width)
                                 .attr("y", function(d, i) {
-                                    console.log(d);
                                     return continentYs[i] } 
                                  )
                                 .attr("width", 30)
@@ -305,17 +302,16 @@
                                         return 1.0;
                                     }
                                     else {
-                                        return 0.7;
+                                        return 0.5;
                                     }
                                 }
                                 else {
-                                    return 0.7;
+                                    return 0.5;
                                 }
 
                             })
                             }).
                             on("mousemove", function(d, i) {
-                                d3.select(this),
                                 chinaHover.transition()        
                                     .duration(50)      
                                     .style("opacity", 1.0);
@@ -332,14 +328,12 @@
                                     .duration(50)      
                                     .style("opacity", .9);     
                                 mouseX = d3.mouse(this);
-                                //console.log(mouseX);
                                 var invertedX = xScale.invert(mouseX[0]);
                                 var dataValue = 0.0;
                                 var usaVal = -1.0;
                                 var chinaVal = -1.0;
                                 var indiaVal = -1.0;
                                 var russiaVal = -1.0;
-                                //console.log(d);
                                 if(d!= null) {
                                     for(var i = 0; i < d.length; i++) {
                                         if(d[i].data.Year == Math.floor(invertedX)) {
@@ -355,6 +349,7 @@
                                             if(d.key == "Russia") {
                                                 dataValue = d[i].data['Russia'];
                                             }
+                                            selectedYear = d[i].data.Year;
                                             usaVal = parseFloat(d[i].data['USA']);
                                             chinaVal = parseFloat(d[i].data['China']);
                                             indiaVal = parseFloat(d[i].data['India']);
@@ -470,6 +465,6 @@
             
 
         </script>
-    	<section class="canvas"> </canvas>
+        <section class="canvas"> </canvas>
     </body>
 </html>
