@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Hover functionality inspired by Will Turman (http://bl.ocks.org/WillTurman/4631136) 
+    and http://bl.ocks.org/d3noob/a22c42db65eb00d4e369 -->
+    <head>
+        <meta charset="utf-8">
+        <title>Assignment 5</title>
+        
+        <script src="//d3js.org/d3.v4.min.js"></script>
+        
+        
+    </head>
+    <style>
+
+        div.tooltip {   
+            position: absolute;         
+            text-align: center;         
+            width: 160px;                    
+            height: 78px;                   
+            padding: 2px;               
+            font: 12px sans-serif;      
+            background: lightsteelblue; 
+            border: 0px;        
+            border-radius: 8px;         
+            pointer-events: none;           
+        }
+
+        div.tooltipCountry {   
+            position: absolute;         
+            text-align: center;         
+            width: 400px;                    
+            height: 50px;                   
+            padding: 2px;               
+            font: 12px sans-serif;      
+            background: white; 
+            border: 0px;        
+            border-radius: 8px;         
+            pointer-events: none;
+            z-index: -10;         
+        }
+
+
+    </style>
+    <body>
+
+       <script type="text/javascript">
+            var margin = {top: 30, bottom:30, left: 140, right: 290},
+            width = 1000 - margin.left - margin.right
+            height = 500 - margin.top - margin.bottom;
+            
+            var radius = width / 5.0;
+
+            var stateHover = d3.select("body").append("div")   
+                .attr("class", "tooltip")               
+                .style("opacity", 0.0);
+
+            var chinaHover = d3.select("body").append("div")   
+                .attr("class", "tooltipCountry")               
+                .style("opacity", 0.0);
+
+            var indiaHover = d3.select("body").append("div")   
+                .attr("class", "tooltipCountry")               
+                .style("opacity", 0.0);
+
+            var usaHover = d3.select("body").append("div")   
+                .attr("class", "tooltipCountry")               
+                .style("opacity", 0.0);
+
+            var russiaHover = d3.select("body").append("div")   
+                .attr("class", "tooltipCountry")               
+                .style("opacity", 0.0);
+
+            
+                d3.csv("data.csv", function(data) {
+
+                    var keys = [];
+                    var yearArray = [];
+                    for(key in data[0]) {
+                        if(key != "Year") {
+                            keys.push(key);
+                        }
+                    }
+
+                    var minX = d3.min(data, function(d){
+                        return d.Year;
+                    });
+
+                    var maxX = d3.max(data, function(d){
+                        return d.Year;
+                    });
+
+                    var maxY = d3.max(data, function(d) {
+                        var total = 0;
+                        keys.forEach(function(k) {
+
+                            total += +d[k];
+                        });
+                        return total;
+                    });
+
+                    
+
+                    var minY = d3.min(data, function(d) {
+                        var total = 0;
+                        keys.forEach(function(k) {
+
+                            total += +d[k];
+                        });
+                        return total;
+                    });
+
+                    var xScale = d3.scaleLinear().range([0,width]).domain([minX,maxX]);
+                    var yScale = d3.scaleLinear().range([height, 0]).domain([0, maxY]);
+
+
+                    var yScaleReverse = d3.scaleLinear().range([0, height]).domain([0, maxY]);
+                    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+                    var stacks = d3.stack().keys(keys).offset(d3.stackOffsetSilhouette)(data);
+                    var colIndices = [];
+                    for(var i = 0; i < stacks.length; i++) {
+                        colIndices[i] = i;
+                    }
+
+                    var firstTime = true;
+
+                    var canvas = d3.select("body").append("svg")
+                            .attr("width", width + margin.left + margin.right)
+                            .attr("height", margin.top + margin.bottom + 2.0*height)
+                          .append("g")
+                            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                    function updateData(isFirst) {
+                        firstTime = false; 
+                        margin = {top: 30, bottom:30, left: 140, right: 290},
+                            width = 1000 - margin.left - margin.right
+                            height = 500 - margin.top - margin.bottom;
+                        var reorderedStacks = [];
+                        var newKeys = [];
+                        for(var i = 0; i < colIndices.length; i++) {
+                            newKeys.push(keys[colIndices[i]]);
+                        }
+                        keys = newKeys;
+
+                        newData = []
+                        for(var i = 0; i < data.length; i++) {
+                            var obj = new Object();
+                            for(var j = 0; j < keys.length; j++) {
+                                obj[keys[j]] = data[i][keys[j]];
+                            }
+                            obj['Year'] = data[i].Year;
+                            newData[i] = obj;
+                        }
+                        data = newData;
+                        
+                        stacks = d3.stack().keys(keys).offset(d3.stackOffsetSilhouette)(newData);
+
+                        var selectedYear = -1;
+
+                        var maxCol = 0;
+                        var continentYs = [];
+                        var continentYsNoOffset = [];
+                        var maxYearPop = 0.0;
+                        for(var i = 0; i < data.length; i++) {
+                            dataColSum = 0.0; 
+                            for(var j = 0; j < keys.length; j++) {
+                                dataColSum += parseFloat(data[i][keys[j]]);
+                            }
+                            if(dataColSum > maxYearPop) {
+                                maxYearPop = dataColSum;
+                                continentYs = []
+                                sumSoFar = margin.top;
+                                for(var j = 0; j < keys.length; j++) {
+                                    sumSoFar += parseFloat(data[i][keys[j]])/2.0;
+                                    continentYs[j] = yScale(sumSoFar);
+                                    sumSoFar += parseFloat(data[i][keys[j]])/2.0;
+                                    continentYsNoOffset[j] = yScale(sumSoFar);
+                                }
+                            }
+                        }
+
+                        colIndices = [];
+                        for(var i = 0; i < stacks.length; i++) {
+                            colIndices[i] = i;
+                        }
+
+
+                        var findIndexToSwitch = function(posY) {
+                            var index = 0;
+                            console.log(posY);
+                            console.log(continentYs);
+                            if(posY < margin.top + height && posY > continentYsNoOffset[0]) {
+                                index = 0;
+                            }
+                            else {
+
+                                for(var i = 1; i < continentYsNoOffset.length; i++) {
+                                    if(posY < continentYsNoOffset[i]) {
+                                        index = i;
+                                        break;
+                                    }
+
+                                }
+                            }
+                            return index;
+                        };
+
+                        var area = d3.area()
+                            .x(function(d) { return xScale(d.data.Year); })
+                            .y0(function(d) { return yScale(d[0] + (maxY)/2.0); })
+                            .y1(function(d) { return yScale(d[1] + (maxY)/2.0); })
+                            .curve(d3.curveBasis);
+                        
+                        if(!isFirst) {
+                            d3.selectAll("svg").remove();
+                            canvas = d3.select("body").append("svg")
+                                .attr("width", width + margin.left + margin.right)
+                                .attr("height", margin.top + margin.bottom + 2.0*height)
+                              .append("g")
+                                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                        }
+
+
+                        canvas.selectAll("path")
+                            .data(stacks)
+                            .enter().append("path")
+                            .attr("d", area)
+                            .style("fill", function(d) { 
+                                
+                                return colorScale(d.key);
+                            });
+
+                        //Show rectangles for swapping order
+
+                        canvas.selectAll("rect")
+                            .data(keys, function(d) {return d;})
+                            .enter().append("rect")
+                                .attr("fill", "green")
+                                .attr("x", width)
+                                .attr("y", function(d, i) {
+                                    return continentYsNoOffset[i] } 
+                                 )
+                                .attr("width", 30)
+                                .attr("height", function(d, i) {
+                                    return Math.abs(continentYs[i] - continentYsNoOffset[i]);
+                                    }
+                                )
+                                .attr("opacity", function(d, i) {
+                                    if(i < colIndices.length - 1) {
+                                        return 1.0;
+                                    }
+                                    else {
+                                        return 0.0;
+                                    }
+                                })
+                                .on("click", function(d, i) {
+                                    if(i < colIndices.length-1) {
+                                        var tempIndex = colIndices[i+1];
+                                        colIndices[i+1] = colIndices[i];
+                                        colIndices[i] = tempIndex;
+                                        updateData(false);
+                                    }
+                                });
+
+
+                        var keys2 = keys;
+
+                        canvas.selectAll("svg")
+                            .data(keys2, function(d) {return d;})
+                            .enter().append("rect")
+                                .attr("fill", "red")
+                                .attr("x", width)
+                                .attr("y", function(d, i) {
+                                    console.log(d);
+                                    return continentYs[i] } 
+                                 )
+                                .attr("width", 30)
+                                .attr("height", function(d, i) {
+                                    return Math.abs(continentYs[i] - continentYsNoOffset[i]);
+                                    }
+                                )
+                                .attr("opacity", function(d, i) {
+                                    if(i > 0) {
+                                        return 1.0;
+                                    }
+                                    else {
+                                        return 0.0;
+                                    }
+                                })
+                                .on("click", function(d, i) {
+                                    if(i > 0) {
+                                        var tempIndex = colIndices[i-1];
+                                        colIndices[i-1] = colIndices[i];
+                                        colIndices[i] = tempIndex;
+                                        updateData(false);
+                                    }
+                                });
+
+                        canvas.selectAll("path")
+                            .attr("opacity", 1)
+                            .on("mouseover", function(d, i) { 
+                                canvas.selectAll("path").attr("opacity", function(d,j) {
+                                if (d != null) {
+                                    var currentKey = keys.indexOf(d.key);
+                                    if(i == j) {
+                                        return 1.0;
+                                    }
+                                    else {
+                                        return 0.7;
+                                    }
+                                }
+                                else {
+                                    return 0.7;
+                                }
+
+                            })
+                            }).
+                            on("mousemove", function(d, i) {
+                                d3.select(this),
+                                chinaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 1.0);
+                                indiaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 1.0);
+                                usaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 1.0);
+                                russiaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 1.0);
+                                stateHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", .9);     
+                                mouseX = d3.mouse(this);
+                                //console.log(mouseX);
+                                var invertedX = xScale.invert(mouseX[0]);
+                                var dataValue = 0.0;
+                                var usaVal = -1.0;
+                                var chinaVal = -1.0;
+                                var indiaVal = -1.0;
+                                var russiaVal = -1.0;
+                                //console.log(d);
+                                if(d!= null) {
+                                    for(var i = 0; i < d.length; i++) {
+                                        if(d[i].data.Year == Math.floor(invertedX)) {
+                                            if(d.key == "USA") {
+                                                dataValue = d[i].data['USA'];
+                                            }
+                                            if(d.key == "China") {
+                                                dataValue = d[i].data['China'];
+                                            }
+                                            if(d.key == "India") {
+                                                dataValue = d[i].data['India'];
+                                            }
+                                            if(d.key == "Russia") {
+                                                dataValue = d[i].data['Russia'];
+                                            }
+                                            usaVal = parseFloat(d[i].data['USA']);
+                                            chinaVal = parseFloat(d[i].data['China']);
+                                            indiaVal = parseFloat(d[i].data['India']);
+                                            russiaVal = parseFloat(d[i].data['Russia']);
+                                            
+                                        }
+                                    }
+                                }
+
+
+                                russiaHover.html("<img src ='russia.png' width = '" + 12.0189017085*Math.sqrt(yScaleReverse(russiaVal)) + "''>")
+                                .style("left", width+140 + "px")     
+                                .style("top", margin.top + "px");
+
+                                indiaHover.html("<img src ='india.jpg' width = '" + 8.56189286*Math.sqrt(yScaleReverse(indiaVal)) + "''>")
+                                .style("left", width+140 + "px")     
+                                .style("top", margin.top + 0.25 * height + "px");
+
+                                chinaHover.html("<img src ='china.png' width = '" + 10*Math.sqrt(yScaleReverse(chinaVal)) + "''>")
+                                .style("left", width+140 + "px")     
+                                .style("top", margin.top + 0.6*height + "px");
+
+                                usaHover.html("<img src ='usa.png' width = '" + 11.5839260086*Math.sqrt(yScaleReverse(usaVal)) + "''><br><h3>Population scaled according <br /> to area of image dimensions</h3>")
+                                .style("left", width+140 + "px")     
+                                .style("top", margin.top + 0.9*height + "px");
+                                if(d!= null) {
+                                    stateHover.html("<h3>" + d.key + "," + selectedYear + "," + dataValue + "</h3>")
+                                        .style("left", (d3.event.pageX) + "px")     
+                                        .style("top", (d3.event.pageY) + "px");
+                                }
+                                })     
+                            .on("mouseout", function(d) {   
+                                canvas.selectAll("path").attr("opacity", function(d,j) {
+                                    return 1.0;
+                                }); 
+
+                                stateHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 0.0);
+
+                                russiaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 0.0);
+
+                                chinaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 0.0);
+
+                                indiaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 0.0);
+
+                                usaHover.transition()        
+                                    .duration(50)      
+                                    .style("opacity", 0.0);         
+                            });
+                        var trianglesUp = [];
+                        var trianglesDown = [];
+
+                        canvas.append("g").call(d3.axisLeft(yScale));
+                        canvas.append("g")
+                        .attr("transform", "translate(" + 0 + "," + height + ")")
+                        .call(d3.axisBottom(xScale));
+
+                        canvas.append("text")
+                        .style("fill", "black")
+                        .style("font-size", "14px")
+                        .attr("x", (width/2.0)-10)
+                        .attr("y", margin.top+height)
+                        .text("Year");
+
+                        canvas.append("text")
+                        .style("fill", "black")
+                        .style("font-size", "14px")
+                        .attr("x", -margin.left)
+                        .attr("y", height/2.0)
+                        .text("Population");
+
+                        canvas.append("text")
+                        .style("fill", "black")
+                        .style("font-size", "14px")
+                        .attr("x", (width/2.0)-30)
+                        .attr("y", 0)
+                        .text("Population by year");
+
+                        canvas.append("rect").attr("fill", "green")
+                        .attr("x", 0.6 * width)
+                        .attr("y", height+ margin.top )
+                        .attr("width", 30)
+                        .attr("height", 40);
+
+                        canvas.append("text")
+                        .attr("x", 0.67 * width)
+                        .attr("y", height+ margin.top + 15)
+                        .text("swap up");
+
+                        canvas.append("rect").attr("fill", "red")
+                        .attr("x", 0.8 * width)
+                        .attr("y", height+ margin.top)
+                        .attr("width", 30)
+                        .attr("height", 40);
+                        
+                        canvas.append("text")
+                        .attr("x", 0.87 * width)
+                        .attr("y", height+ margin.top + 15)
+                        .text("swap down");
+                    };
+                    if(firstTime) {
+                        updateData(firstTime);
+                    }
+
+                });
+            
+
+        </script>
+    	<section class="canvas"> </canvas>
+    </body>
+</html>
