@@ -129,6 +129,7 @@
                           .append("g")
                             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+                    //Call a function to actually draw because will need to redraw upon swapping order
                     function updateData(isFirst) {
                         firstTime = false; 
                         margin = {top: 30, bottom:30, left: 140, right: 290},
@@ -227,70 +228,10 @@
                                 return colorScale(d.key);
                             });
 
-                        //Show rectangles for swapping order
+                        var triangle = d3.symbol()
+                            .type(d3.symbolTriangle)
+                            .size(55);
 
-                        canvas.selectAll("rect")
-                            .data(keys, function(d) {return d;})
-                            .enter().append("rect")
-                                .attr("fill", "green")
-                                .attr("x", width)
-                                .attr("y", function(d, i) {
-                                    return continentYsNoOffset[i] } 
-                                 )
-                                .attr("width", 30)
-                                .attr("height", function(d, i) {
-                                    return Math.abs(continentYs[i] - continentYsNoOffset[i]);
-                                    }
-                                )
-                                .attr("opacity", function(d, i) {
-                                    if(i < colIndices.length - 1) {
-                                        return 1.0;
-                                    }
-                                    else {
-                                        return 0.0;
-                                    }
-                                })
-                                .on("click", function(d, i) {
-                                    if(i < colIndices.length-1) {
-                                        var tempIndex = colIndices[i+1];
-                                        colIndices[i+1] = colIndices[i];
-                                        colIndices[i] = tempIndex;
-                                        updateData(false);
-                                    }
-                                });
-
-
-                        var keys2 = keys;
-
-                        canvas.selectAll("svg")
-                            .data(keys2, function(d) {return d;})
-                            .enter().append("rect")
-                                .attr("fill", "red")
-                                .attr("x", width)
-                                .attr("y", function(d, i) {
-                                    return continentYs[i] } 
-                                 )
-                                .attr("width", 30)
-                                .attr("height", function(d, i) {
-                                    return Math.abs(continentYs[i] - continentYsNoOffset[i]);
-                                    }
-                                )
-                                .attr("opacity", function(d, i) {
-                                    if(i > 0) {
-                                        return 1.0;
-                                    }
-                                    else {
-                                        return 0.0;
-                                    }
-                                })
-                                .on("click", function(d, i) {
-                                    if(i > 0) {
-                                        var tempIndex = colIndices[i-1];
-                                        colIndices[i-1] = colIndices[i];
-                                        colIndices[i] = tempIndex;
-                                        updateData(false);
-                                    }
-                                });
 
                         canvas.selectAll("path")
                             .attr("opacity", 1)
@@ -335,31 +276,34 @@
                                 var indiaVal = -1.0;
                                 var russiaVal = -1.0;
                                 if(d!= null) {
-                                    for(var i = 0; i < d.length; i++) {
-                                        if(d[i].data.Year == Math.floor(invertedX)) {
-                                            if(d.key == "USA") {
-                                                dataValue = d[i].data['USA'];
-                                            }
-                                            if(d.key == "China") {
-                                                dataValue = d[i].data['China'];
-                                            }
-                                            if(d.key == "India") {
-                                                dataValue = d[i].data['India'];
-                                            }
-                                            if(d.key == "Russia") {
-                                                dataValue = d[i].data['Russia'];
-                                            }
-                                            selectedYear = d[i].data.Year;
-                                            usaVal = parseFloat(d[i].data['USA']);
-                                            chinaVal = parseFloat(d[i].data['China']);
-                                            indiaVal = parseFloat(d[i].data['India']);
-                                            russiaVal = parseFloat(d[i].data['Russia']);
-                                            
+                                    if(d != "India" && d != "China" && d!= "Russia" && d!= "USA") {
+                                        for(var i = 0; i < d.length; i++) {
+                                                console.log(d[i]);
+                                                if(d[i].data.Year == Math.floor(invertedX)) {
+                                                    if(d.key == "USA") {
+                                                        dataValue = d[i].data['USA'];
+                                                    }
+                                                    if(d.key == "China") {
+                                                        dataValue = d[i].data['China'];
+                                                    }
+                                                    if(d.key == "India") {
+                                                        dataValue = d[i].data['India'];
+                                                    }
+                                                    if(d.key == "Russia") {
+                                                        dataValue = d[i].data['Russia'];
+                                                    }
+                                                    selectedYear = d[i].data.Year;
+                                                    usaVal = parseFloat(d[i].data['USA']);
+                                                    chinaVal = parseFloat(d[i].data['China']);
+                                                    indiaVal = parseFloat(d[i].data['India']);
+                                                    russiaVal = parseFloat(d[i].data['Russia']);
+                                                    
+                                                    }
                                         }
                                     }
                                 }
 
-
+                                //Decimal numbers manually calculated to minimize lie factor between countries
                                 russiaHover.html("<img src ='russia.png' width = '" + 12.0189017085*Math.sqrt(yScaleReverse(russiaVal)) + "''>")
                                 .style("left", width+140 + "px")     
                                 .style("top", margin.top + "px");
@@ -456,6 +400,47 @@
                         .attr("x", 0.87 * width)
                         .attr("y", height+ margin.top + 15)
                         .text("swap down");
+
+                        canvas.selectAll("svg")
+                            .data(keys, function(d) {return d;})
+                            .enter().append("path")
+                            .attr("d", triangle)
+                            .attr("stroke", "black")
+                            .attr("fill", "green")
+                            .attr("transform", function(d, i) {
+                                var yOffset = continentYsNoOffset[i] +  Math.abs(continentYsNoOffset[i]-continentYs[i])/2.0;
+                                return "translate(" + 1.02*width + "," + yOffset + ")";
+                            })
+                            .on("click", function(d, i) {
+                                    if(i < colIndices.length-1) {
+                                        var tempIndex = colIndices[i+1];
+                                        colIndices[i+1] = colIndices[i];
+                                        colIndices[i] = tempIndex;
+                                        updateData(false);
+                                    }
+                                });
+
+
+                        var keys2 = keys;
+
+                        canvas.selectAll("svg")
+                            .data(keys2, function(d) {return d;})
+                            .enter().append("path")
+                            .attr("d", triangle)
+                            .attr("stroke", "black")
+                            .attr("fill", "red")
+                            .attr("transform", function(d, i) {
+                                var yOffset = continentYs[i] + 10;
+                                return "translate(" + 1.02*width + "," + yOffset + ") rotate(180)";
+                            })
+                            .on("click", function(d, i) {
+                                    if(i > 0) {
+                                        var tempIndex = colIndices[i-1];
+                                        colIndices[i-1] = colIndices[i];
+                                        colIndices[i] = tempIndex;
+                                        updateData(false);
+                                    }
+                                });
                     };
                     if(firstTime) {
                         updateData(firstTime);
